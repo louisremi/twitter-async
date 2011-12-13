@@ -67,9 +67,9 @@ class EpiTwitter extends EpiOAuth
     $this->isAsynchronous = (bool)$async;
   }
 
-  public function __construct($consumerKey = null, $consumerSecret = null, $oauthToken = null, $oauthTokenSecret = null)
+  public function __construct($consumerKey = null, $consumerSecret = null, $oauthToken = null, $oauthTokenSecret = null, $signOnly = null)
   {
-    parent::__construct($consumerKey, $consumerSecret, self::EPITWITTER_SIGNATURE_METHOD);
+    parent::__construct($consumerKey, $consumerSecret, self::EPITWITTER_SIGNATURE_METHOD, $signOnly);
     $this->setToken($oauthToken, $oauthTokenSecret);
   }
 

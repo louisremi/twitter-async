@@ -144,9 +144,13 @@ class EpiOAuth
     {
       $oauth .= "{$name}=\"{$value}\",";
     }
-    $_h[] = substr($oauth, 0, -1);
-    $_h[] = "User-Agent: {$this->userAgent}";
-    $this->addHeader($_h);
+    if ($this->signOnly) {
+      return substr($oauth, 15, -1);
+    } else {
+      $_h[] = substr($oauth, 0, -1);
+      $_h[] = "User-Agent: {$this->userAgent}";
+      $this->addHeader($_h);
+    }
   }
 
   protected function buildHttpQueryRaw($params)
@@ -231,13 +235,16 @@ class EpiOAuth
   }
 
   protected function httpDelete($url, $params) {
-      $this->addDefaultHeaders($url, $params['oauth']);
+    $resp = $this->addDefaultHeaders($url, $params['oauth']);
+    if (!$this->signOnly) {
       $ch = $this->curlInit($url);
       curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
       curl_setopt($ch, CURLOPT_POSTFIELDS, $this->buildHttpQueryRaw($params['request']));
       $resp = $this->executeCurl($ch);
       $this->emptyHeaders();
-      return $resp;
+    }
+
+    return $resp;
   }
 
   protected function httpGet($url, $params = null)
@@ -251,27 +258,31 @@ class EpiOAuth
       }
       $url = substr($url, 0, -1);
     }
-    $this->addDefaultHeaders($url, $params['oauth']);
-    $ch = $this->curlInit($url);
-    $resp = $this->executeCurl($ch);
-    $this->emptyHeaders();
+    $resp = $this->addDefaultHeaders($url, $params['oauth']);
+    if (!$this->signOnly) {
+      $ch = $this->curlInit($url);
+      $resp = $this->executeCurl($ch);
+      $this->emptyHeaders();
+    }
 
     return $resp;
   }
 
   protected function httpPost($url, $params = null, $isMultipart)
   {
-    $this->addDefaultHeaders($url, $params['oauth']);
-    $ch = $this->curlInit($url);
-    curl_setopt($ch, CURLOPT_POST, 1);
-    // php's curl extension automatically sets the content type
-    // based on whether the params are in string or array form
-    if($isMultipart)
-      curl_setopt($ch, CURLOPT_POSTFIELDS, $params['request']);
-    else
-      curl_setopt($ch, CURLOPT_POSTFIELDS, $this->buildHttpQueryRaw($params['request']));
-    $resp = $this->executeCurl($ch);
-    $this->emptyHeaders();
+    $resp = $this->addDefaultHeaders($url, $params['oauth']);
+    if (!$this->signOnly) {
+      $ch = $this->curlInit($url);
+      curl_setopt($ch, CURLOPT_POST, 1);
+      // php's curl extension automatically sets the content type
+      // based on whether the params are in string or array form
+      if($isMultipart)
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $params['request']);
+      else
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $this->buildHttpQueryRaw($params['request']));
+      $resp = $this->executeCurl($ch);
+      $this->emptyHeaders();
+    }
 
     return $resp;
   }
@@ -379,12 +390,15 @@ class EpiOAuth
     return $retval;
   }
 
-  public function __construct($consumerKey, $consumerSecret, $signatureMethod='HMAC-SHA1')
+  public function __construct($consumerKey, $consumerSecret, $signatureMethod='HMAC-SHA1', $signOnly=false)
   {
     $this->consumerKey = $consumerKey;
     $this->consumerSecret = $consumerSecret;
     $this->signatureMethod = $signatureMethod;
-    $this->curl = EpiCurl::getInstance();
+    $this->signOnly = $signOnly;
+    if (!$signOnly) {
+      $this->curl = EpiCurl::getInstance();
+    }
   }
 }
 
